@@ -41,3 +41,22 @@ def p_expression_compare(p):
 def p_expression_arith(p):
     'expression : arith_expr'
     p[0] = p[1]
+
+
+def p_statement_while(p):
+    'statement : WHILE LPAREN expression RPAREN opt_newlines block'
+    p[0] = Node("while", [p[3], p[6]])
+
+def p_statement_for(p):
+    'statement : FOR LPAREN ID EQUALS expression SEMICOLON expression SEMICOLON ID EQUALS expression RPAREN opt_newlines block'
+    p[0] = Node("for", [
+        Node("=", [Node("id", value=p[3]), p[5]]),
+        p[7],
+        Node("=", [Node("id", value=p[9]), p[11]]),
+        p[14]
+    ])
+
+
+def p_statement_if(p):
+    'statement : IF LPAREN expression RPAREN opt_newlines block'
+    p[0] = Node("if", [p[3], p[6]])
