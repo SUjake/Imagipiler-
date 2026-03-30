@@ -70,3 +70,19 @@ class IRGenerator:
             self.code.append(f"{var} = {val}")
             return var
 
+# ----- DECLARATION -------------------------
+        if node.type == "decl":
+            var = node.children[0].value
+            val = self.generate(node.children[1])
+            self.code.append(f"{var} = {val}")
+            return var
+        
+# ----- I/O -------------------------------
+        if node.type == "show":
+            val = self.generate(node.children[0])
+            self.code.append(f"print {val}")
+
+        if node.type == "take":
+            var = node.children[0].value
+            self.code.append(f"{var} = input")
+
