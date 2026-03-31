@@ -14,3 +14,13 @@ def build_token_table(tokens):
             <TD>{tok.lexpos}</TD>
         </TR>
         """
+        
+    return f'''<<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR>
+            <TD BGCOLOR="black"><FONT COLOR="white"><B>Type</B></FONT></TD>
+            <TD BGCOLOR="black"><FONT COLOR="white"><B>Value</B></FONT></TD>
+            <TD BGCOLOR="black"><FONT COLOR="white"><B>Line</B></FONT></TD>
+            <TD BGCOLOR="black"><FONT COLOR="white"><B>Pos</B></FONT></TD>
+        </TR>
+        {rows}
+    </TABLE>>'''
