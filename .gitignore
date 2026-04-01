@@ -1,1 +1,6 @@
 /venv
+ast_tree
+ast_tree.pdf
+parser.out
+parsetab.py
+__pycache__
