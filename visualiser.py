@@ -23,4 +23,23 @@ def build_token_table(tokens):
             <TD BGCOLOR="black"><FONT COLOR="white"><B>Pos</B></FONT></TD>
         </TR>
         {rows}
+    </TABLE>>'
+
+
+def build_ir_table(ir_code):
+    rows = ""
+    for i, instr in enumerate(ir_code):
+        rows += f"""
+        <TR>
+            <TD>{i}</TD>
+            <TD>{escape(str(instr))}</TD>
+        </TR>
+        """
+
+    return f'''<<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
+        <TR>
+            <TD><B>#</B></TD>
+            <TD><B>Algorithm representation</B></TD>
+        </TR>
+        {rows}
     </TABLE>>'''
