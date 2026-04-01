@@ -60,3 +60,78 @@ def p_statement_for(p):
 def p_statement_if(p):
     'statement : IF LPAREN expression RPAREN opt_newlines block'
     p[0] = Node("if", [p[3], p[6]])
+
+#--------------------------------------------
+#:p:- FACTOR
+
+def p_factor_number(p):
+    'factor : NUMBER'
+    p[0] = Node("num", value=p[1])
+
+def p_factor_id(p):
+    'factor : ID'
+    p[0] = Node("id", value=p[1])
+
+
+
+def p_factor_power(p):
+    'factor : factor POWER term'
+    p[0] = Node("^", [p[1], p[3]])
+
+def p_factor_group(p):
+    'factor : LPAREN expression RPAREN'
+    p[0] = p[2]
+
+def p_factor_string(p):
+    'factor : STRING'
+    p[0] = Node("str", value=p[1])
+
+def p_factor_error(p):
+    'factor : ERROR'
+    print("Bad string detected")
+    p[0] = Node("error")
+#--------------------------------------------
+#:p:- STATEMENT RULES
+def p_statement_show(p):
+    'statement : SHOW LPAREN expression RPAREN'
+    p[0] = Node("show", [p[3]])
+
+def p_statement_take(p):
+    'statement : TAKE LPAREN ID RPAREN'
+    p[0] = Node("take", [Node("id", value=p[3])])
+
+def p_statement_decl_int(p):
+    'statement : INT ID EQUALS expression'
+    p[0] = Node("decl", [Node("id", value=p[2]), p[4]], value="int")
+
+def p_statement_decl_float(p):
+    'statement : FLOAT ID EQUALS expression'
+    p[0] = Node("decl", [Node("id", value=p[2]), p[4]], value="float")
+
+def p_statement_decl_string(p):
+    'statement : STRING_TYPE ID EQUALS expression'
+    p[0] = Node("decl", [Node("id", value=p[2]), p[4]], value="string")
+
+#--------------------------------------------
+#:p:- Block rules
+def p_block(p):
+    'block : LBRACE opt_newlines stmt_list opt_newlines RBRACE'
+    p[0] = Node("block", p[3])
+
+def p_block_error(p):
+    'block : LBRACE error'
+    print("Recovering broken block")
+
+    while True:
+        tok = parser.token()
+        if not tok:
+            break
+        if tok.type == 'RBRACE':
+            break
+
+    parser.errok()
+    p[0] = Node("block", [])
+
+
+#--------------------------------------------
+parser = yacc.yacc(start='program')
