@@ -1,10 +1,14 @@
 import ply.lex as lex
 from rich.console import Console
 from rich.table import Table
+
 console = Console()
 
-#:p:- Ye daal diye hai tokens maine issi ke around work karna SARTHAK 
+lexError = False
 
+# ------------------------
+# TOKENS
+# ------------------------
 tokens = (
     'ID','NUMBER','STRING',
 
@@ -14,6 +18,7 @@ tokens = (
     'LPAREN','RPAREN',
     'LBRACE','RBRACE',
     'SEMICOLON','NEWLINE',
+
     'LT','GT','LE','GE','EQ','NE',
 
     # keywords
@@ -32,6 +37,12 @@ reserved = {
     'for': 'FOR',
     'if': 'IF'
 }
+
+
+# ------------------------
+# TOKEN RULES (REGEX)
+# ------------------------
+
 
 t_POWER =r'\^'
 t_PLUS    = r'\+'
@@ -66,6 +77,8 @@ def t_INVALID_ID(t):
     r'\d+[a-zA-Z_][a-zA-Z0-9_]*'
     console.print(f"[red]Invalid identifier[/red] '{t.value}' at line {t.lineno}")
     t.type = 'ERROR'
+    global lexError
+    lexError = True
     return t
 
 def t_ID(t):
@@ -82,7 +95,8 @@ def t_UNTERMINATED_STRING(t):
     r'"([^"\n\\]|\\.)*\n'
 
     console.print(f"[red]Unterminated string[/red] at line {t.lineno}")
-
+    global lexError
+    lexError = True
     t.lexer.lineno += 1
 
     # 🔥 RETURN A SPECIAL TOKEN INSTEAD
@@ -114,41 +128,11 @@ def t_newline(t):
 # Error handling
 def t_error(t):
     console.print(f"[red]Illegal character:[/red] '{t.value[0]}' at line {t.lineno}")
+    global lexError
+    lexError = True
     t.lexer.skip(1)
 
-# ------------------------
-# BUILD LEXER
-# ------------------------
 lexer = lex.lex()
-
-# ------------------------
-# VISUALIZER FUNCTION
-# ------------------------
-def visualize_tokens(code):
-    lexer.input(code)
-
-    table = Table(title="Token Stream")
-
-    table.add_column("Type", style="cyan")
-    table.add_column("Value", style="green")
-    table.add_column("Line", style="yellow")
-    table.add_column("Position", style="magenta")
-
-    while True:
-        tok = lexer.token()
-        if not tok:
-            break
-
-        table.add_row(
-            tok.type,
-            str(tok.value),
-            str(tok.lineno),
-            str(tok.lexpos)
-        )
-
-    console.print(table)
-
-#_____________________________________
 
 def get_tokens_list(code):
     lexer.input(code)
@@ -162,18 +146,3 @@ def get_tokens_list(code):
 
     return tokens_list
 
-# ------------------------
-# MAIN TEST
-# ------------------------
-
-def get_lexer():
-    return lex.lex()
-
-if __name__ == "__main__":
-    code = '''
-    int x = 10;
-    float y = 20.5;
-    show x + y;
-    '''
-
-    visualize_tokens(code)
