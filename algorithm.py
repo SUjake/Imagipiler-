@@ -85,4 +85,46 @@ class IRGenerator:
         if node.type == "take":
             var = node.children[0].value
             self.code.append(f"{var} = input")
+# ----- WHILE LOOP -----
+        if node.type == "while":
+            start = self.new_label()
+            end = self.new_label()
 
+            self.code.append(f"{start}:")
+
+            cond = self.generate(node.children[0])
+            self.code.append(f"if {cond} False goto {end} else go to next Line")
+
+            for stmt in node.children[1].children:
+                self.generate(stmt)
+
+            self.code.append(f"goto {start}")
+            self.code.append(f"{end}:")
+        # ----- FOR LOOP -----
+        if node.type == "for":
+            init, cond, update, block = node.children
+
+            self.generate(init)
+
+            start = self.new_label()
+            end = self.new_label()
+
+            self.code.append(f"{start}:")
+
+            cond_val = self.generate(cond)
+            self.code.append(f"ifFalse {cond_val} goto {end}")
+
+            for stmt in block.children:
+                self.generate(stmt)
+
+            self.generate(update)
+
+            self.code.append(f"goto {start}")
+            self.code.append(f"{end}:")
+
+
+        if node.type in ["block", "S"]:
+            for child in node.children:
+                self.generate(child)
+
+        return None
