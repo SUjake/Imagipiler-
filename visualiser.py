@@ -1,45 +1,41 @@
-from graphviz import Digraph
-from html import escape 
+def visualize_ast(root,tokens,ir_code):
+    dot = Digraph()
+    
+    counter = 0
+    dot.attr(rankdir="TB")
+    #dot.attr(nodesep="1.0", ranksep="1.5")  
 
+    def get_shape(node):
+        if node.type == "=":
+            return "diamond"
 
-def build_token_table(tokens):
-    rows = ""
-    for tok in tokens:
-        
-        rows += f"""
-        <TR>
-            <TD>{escape(str(tok.type))}</TD>
-            <TD>{escape(str(tok.value))}</TD>
-            <TD>{tok.lineno}</TD>
-            <TD>{tok.lexpos}</TD>
-        </TR>
-        """
-        
-    return f'''<<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
-        <TR>
-            <TD BGCOLOR="black"><FONT COLOR="white"><B>Type</B></FONT></TD>
-            <TD BGCOLOR="black"><FONT COLOR="white"><B>Value</B></FONT></TD>
-            <TD BGCOLOR="black"><FONT COLOR="white"><B>Line</B></FONT></TD>
-            <TD BGCOLOR="black"><FONT COLOR="white"><B>Pos</B></FONT></TD>
-        </TR>
-        {rows}
-    </TABLE>>'
+        elif node.type in ["id", "num", "str"]:
+            return "box"
 
+        elif node.type in ["+", "-", "*", "/", "^"]:
+            return "circle"
 
-def build_ir_table(ir_code):
-    rows = ""
-    for i, instr in enumerate(ir_code):
-        rows += f"""
-        <TR>
-            <TD>{i}</TD>
-            <TD>{escape(str(instr))}</TD>
-        </TR>
-        """
+        elif node.type in ["<", ">", "<=", ">=", "==", "!="]:
+            return "hexagon"
 
-    return f'''<<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0">
-        <TR>
-            <TD><B>#</B></TD>
-            <TD><B>Algorithm representation</B></TD>
-        </TR>
-        {rows}
-    </TABLE>>'''
+        elif node.type in ["show", "take"]:
+            return "parallelogram"
+
+        elif node.type == "decl":
+            return "component"
+
+        elif node.type == "while":
+            return "octagon"
+
+        elif node.type == "for":
+            return "doublecircle"
+
+        elif node.type == "block":
+            return "folder"
+
+        elif node.type == "S":
+            return "folder"
+
+        return "ellipse"
+
+    dot.attr('node', fontname="Arial")
