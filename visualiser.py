@@ -129,3 +129,63 @@ def visualize_ast(root,tokens,ir_code):
             return "white"
 
         return "white"
+
+    def add_nodes(node, parent=None):
+        if node is None:
+            return None
+
+        nonlocal counter
+        node_id = str(counter)
+        counter += 1
+
+        # Label
+        label = node.type
+        if node.value is not None:
+            label += f"\n{node.value}"
+
+        dot.node(
+            node_id,
+            label,
+            style="filled",
+            fillcolor=get_color(node),
+            shape=get_shape(node)
+        )
+
+        if parent is not None:
+            dot.edge(parent, node_id)
+
+        for child in node.children:
+            add_nodes(child, node_id)
+
+        return node_id   # 🔥 IMPORTANT
+
+
+    table_label = build_token_table(tokens)
+
+    dot.node(
+        "TOKENS",
+        label=table_label,
+        shape="plain"
+    )
+
+    ir_label = build_ir_table(ir_code)
+
+    dot.node(
+        "IR",
+        label=ir_label,
+        shape="plain"
+    )
+
+    root_id = add_nodes(root)
+
+    # 🔥 Put TOKENS and IR on same horizontal level
+    with dot.subgraph() as s:
+        s.attr(rank="same")
+        s.node("TOKENS")
+        s.node("IR")
+
+    # 🔥 AST goes below
+    dot.edge("TOKENS", root_id)
+    dot.edge("IR", root_id)
+
+    dot.render("ast_tree", view=True)
