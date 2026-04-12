@@ -104,26 +104,12 @@ def p_statement_assign(p):
         p[3]
     ])
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-def p_statement_decl_error(p):
-    global SyntaxCount
-    'statement : STRING_TYPE ID EQUALS error'
-    print("Invalid string declaration skipped")
-    p[0] = Node("error")
-    SyntaxCount+=1
 
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-def p_statement_assign_error(p):
-    global SyntaxCount
-    'statement : ID EQUALS error'
-    print("Invalid assignment skipped")
-    p[0] = Node("error")
-    SyntaxCount+=1
     
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 #-----------------------------------------------------------
 #:p:-  expression rules
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -227,19 +213,7 @@ def p_block(p):
     'block : LBRACE opt_newlines stmt_list opt_newlines RBRACE'
     p[0] = Node("block", p[3])
 
-def p_block_error(p):
-    'block : LBRACE error'
-    print("Recovering broken block")
 
-    while True:
-        tok = parser.token()
-        if not tok:
-            break
-        if tok.type == 'RBRACE':
-            break
-
-    parser.errok()
-    p[0] = Node("block", [])
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 #---------------------------------------------
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -265,48 +239,64 @@ def p_statement_if(p):
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-def p_statement_decl_missing_assign(p):
-    '''statement : type ID error
-                 | type ID error stmt_sep'''
-    print(f"Missing assign operator in declaration near line {p.lineno(2)}")
+def p_line_recover(p):
+    'line : error NEWLINE'
+    global SyntaxCount
+    print("💥 skipping bad line")
+    SyntaxCount += 1
+    p[0] = []
+
+def p_statement_decl_missing_equals(p):
+    'statement : type ID expression'
+    print(f"Missing '=' in declaration near line {p.lineno(2)}")
     p[0] = Node("error")
+    global SyntaxCount
+    SyntaxCount += 1
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-def p_statement_decl_bad_rhs(p):
-    '''statement : type ID EQUALS error
-                 | type ID EQUALS error stmt_sep'''
-    print(f"Invalid value in declaration near line {p.lineno(2)}")
+# bad assignment rhs
+def p_statement_assign_error(p):
+    'statement : ID EQUALS error'
+    print("Invalid assignment skipped")
     p[0] = Node("error")
+    global SyntaxCount
+    SyntaxCount += 1
 
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# bad declaration rhs
+def p_statement_decl_error(p):
+    'statement : type ID EQUALS error'
+    print("Invalid declaration skipped")
+    p[0] = Node("error")
+    global SyntaxCount
+    SyntaxCount += 1
+
+
+# missing identifier in declaration
 def p_statement_decl_missing_id(p):
-    'statement : STRING_TYPE EQUALS expression'
-    print("Missing identifier in string declaration")
-    p[0] = Node("error")
-
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-def p_statement_decl_missing_id_error(p):
     'statement : type EQUALS error'
-    print("Invalid {type} declaration (missing id)")
+    print("Missing identifier in declaration")
     p[0] = Node("error")
+    global SyntaxCount
+    SyntaxCount += 1
 
-def p_statement_decl_missing_both(p):
-    'statement : type error'
-    print("Incomplete {type} declaration")
-    p[0] = Node("error")
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+# bad identifier token from lexer
 def p_statement_decl_bad_id(p):
-    '''statement : INT ERROR EQUALS expression
-                 | FLOAT ERROR EQUALS expression
-                 | STRING_TYPE ERROR EQUALS expression'''
+    'statement : type ERROR EQUALS error'
     print("Invalid identifier in declaration")
     p[0] = Node("error")
+    global SyntaxCount
+    SyntaxCount += 1
 
+
+# totally broken declaration
+def p_statement_decl_broken(p):
+    'statement : type error'
+    print("Incomplete declaration")
+    p[0] = Node("error")
+    global SyntaxCount
+    SyntaxCount += 1
 
 
 #---------------------------------
@@ -315,30 +305,15 @@ def p_full_statement(p):
     'full_statement : statement stmt_sep'
     p[0] = p[1]
 
-def p_full_statement_error(p):
-    'full_statement : error stmt_sep'
-    print("💥 nuked invalid statement completely")
-    p[0] = Node("error")
-
-
 
 #----------------------------------
+
 def p_error(p):
     if not p:
         print("[SYNTAX ERROR] Unexpected EOF")
         return
 
     print(f"[SYNTAX ERROR] Line {p.lineno}, Token '{p.value}'")
-
-    while True:
-        tok = parser.token()
-        if not tok:
-            return
-        if tok.type in ('NEWLINE', 'RBRACE', 'SEMICOLON'):
-            break
-
-    parser.errok()
-
 
 #-----------------------------------
 #:p:- Factor
@@ -370,5 +345,3 @@ def print_tree(node, level=0):
     print("  " * level + f"{node.type} ({node.value})")
     for child in node.children:
         print_tree(child, level + 1)
-
-
