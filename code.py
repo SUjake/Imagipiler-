@@ -1,57 +1,78 @@
 import parser
-import algorithm
+import intermidiate
 from sementic import SemanticAnalyzer
-from lexer import get_lexer, get_tokens_list
+import lexer
 from visualiser import visualize_ast
+from asm import AssemblyGenerator
+from asmFromat import format_assembly
+from rich.console import Console
 
 
-code = """
-int  = 5
-string s  = "Suryansh saini is so cool"
-#hiii 
-string e = "this is error"
+def run_compiler(code, console=None):
+    # ---------------- CONSOLE SETUP ----------------
+    if console is None:
+        console = Console()
 
-while(x>0)
-{
-    show(ans)
-    show(ans2)
-    x = x-1
-}
-"""
+    # Inject SAME console everywhere (CRITICAL)
+    parser.console = console
+    lexer.console = console
 
-# reset error count (important)
-parser.SyntaxCount = 0
+    # ---------------- RESET FLAGS ----------------
+    parser.SyntaxCount = 0
+    asmFlag = 0
+    lexer.lexError = False
 
-tokens_list = get_tokens_list(code)
-lexer = get_lexer()
+    console.print("[bold cyan]Starting Compilation...[/bold cyan]\n")
 
-# parse
-result = parser.parser.parse(code, lexer=lexer)
+    # ---------------- LEXICAL ----------------
+    tokens_list = lexer.get_tokens_list(code)
+    lex = lexer.get_lexer()
 
-# IR
-ir = algorithm.IRGenerator()
-if result:
-    ir.generate(result)
+    # ---------------- PARSING ----------------
+    result = parser.parser.parse(code, lexer=lex)
 
-# AST visualize
-if result is None:
-    print("Parsing failed. AST not generated.")
-else:
-    visualize_ast(result, tokens_list, ir.code)
+    # ---------------- IR GENERATION ----------------
+    ir = intermidiate.IRGenerator()
+    if result:
+        ir.generate(result)
 
-# syntax errors
-print("Syntax Errors:", parser.SyntaxCount)
+    # ---------------- AST VISUALIZATION ----------------
+    ast_path = None
 
-# semantic phase
-if parser.SyntaxCount == 0:
-    analyzer = SemanticAnalyzer()
-    analyzer.analyze(result)
-
-    if analyzer.errors:
-        print("\n--- SEMANTIC ERRORS ---")
-        for err in analyzer.errors:
-            print(err)
+    if result is None:
+        console.print("[bold red]Parsing failed. AST not generated.[/bold red]")
     else:
-        print("\nNo semantic errors. You're clean.")
-else:
-    print("\nDue to syntax errors semantic analysis is skipped\n")
+        ast_path = visualize_ast(result, tokens_list, ir.code)
+
+    # ---------------- ERROR REPORT ----------------
+    console.print(f"[yellow]Syntax Errors:[/yellow] {parser.SyntaxCount}")
+    console.print(f"[yellow]Lexical Error:[/yellow] {lexer.lexError}")
+
+    # ---------------- SEMANTIC ANALYSIS ----------------
+    if parser.SyntaxCount == 0 and not lexer.lexError and result is not None:
+
+        analyzer = SemanticAnalyzer()
+        analyzer.analyze(result)
+
+        if analyzer.errors:
+            console.print("\n[bold red]--- SEMANTIC ERRORS ---[/bold red]")
+            for err in analyzer.errors:
+                console.print(f"[red]{err}[/red]")
+        else:
+            console.print("\n[bold green]No semantic errors. You're clean.[/bold green]\n")
+            asmFlag = 1
+    else:
+        console.print("\n[bold yellow]Due to lexical/syntax errors semantic analysis is skipped[/bold yellow]\n")
+
+    # ---------------- ASSEMBLY GENERATION ----------------
+    if asmFlag:
+        generator = AssemblyGenerator()
+        generator.generate(result)
+        format_assembly(generator.code, generator.get_data(), console)
+    else:
+        console.print("[bold red]Due to Errors , Assembly formation is skipped[/bold red]")
+
+    console.print("\n[bold cyan]Compilation Finished[/bold cyan]")
+
+    # 🔥 return AST path for frontend
+    return ast_path
