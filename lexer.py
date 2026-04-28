@@ -146,3 +146,5 @@ def get_tokens_list(code):
 
     return tokens_list
 
+def get_lexer():
+    return lex.lex()

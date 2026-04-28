@@ -1,23 +1,36 @@
 import ply.yacc as yacc
 from lexer import tokens, get_lexer, get_tokens_list
 from visualiser import visualize_ast
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
 
 SyntaxCount = 0
 
+console = Console()
 
-# ------------------------
-# AST NODE
-#----------------------- 
+def pretty_error(message, line=None, hint=None):
+    text = Text()
+
+    text.append("⚠ SYNTAX ERROR\n", style="bold yellow")
+    text.append(f"{message}\n", style="yellow")
+
+    if line:
+        text.append(f"Line: {line}\n", style="dim yellow")
+
+    if hint:
+        text.append(f"Hint: {hint}", style="italic yellow")
+
+    console.print(Panel(text, border_style="yellow"))
+
+
 class Node:
     def __init__(self, type, children=None, value=None):
         self.type = type
         self.children = children or []
         self.value = value
-        
 
-# ------------------------
-# PRECEDENCE (VERY IMPORTANT)
-# ------------------------
+
 precedence = (
     ('left', 'LT', 'GT', 'LE', 'GE', 'EQ', 'NE'),
     ('left', 'PLUS', 'MINUS'),
@@ -32,11 +45,6 @@ SYNC_TOKENS = {
 }
 
 start = 'program'
-# ------------------------
-# * GRAMMAR RULES
-# ------------------------
-
-#----------------------------------------------------------------
 
 
 def p_opt_newlines_empty(p):
@@ -47,8 +55,7 @@ def p_opt_newlines_more(p):
     'opt_newlines : opt_newlines NEWLINE'
     pass
 
-#---------------------------------------------
-#! STMT
+
 def p_stmt_sep_single(p):
     'stmt_sep : NEWLINE'
     pass
@@ -58,14 +65,12 @@ def p_stmt_sep_more(p):
     pass
 
 
-
 def p_stmt_list_single(p):
     'stmt_list : full_statement'
     if p[1] is None or p[1].type == "error":
         p[0] = []
     else:
         p[0] = [p[1]]
-
 
 def p_stmt_list_more(p):
     'stmt_list : stmt_list full_statement'
@@ -74,13 +79,9 @@ def p_stmt_list_more(p):
     else:
         p[0] = p[1] + [p[2]]
 
-
-
 def p_stmt_list_trailing_newline(p):
     'stmt_list : stmt_list stmt_sep'
     p[0] = p[1]
-
-#------------------------------------------------
 
 
 def p_type(p):
@@ -90,13 +91,11 @@ def p_type(p):
     p[0] = p[1]
 
 
-#--------------------------------------------------
 def p_program(p):
     'program : opt_newlines stmt_list opt_newlines'
     p[0] = Node("S", p[2])
 
-#-----------------------------------------------------
-# statement : ID '=' expression
+
 def p_statement_assign(p):
     'statement : ID EQUALS expression'
     p[0] = Node("=", [
@@ -105,14 +104,6 @@ def p_statement_assign(p):
     ])
 
 
-
-
-    
-
-
-#-----------------------------------------------------------
-#:p:-  expression rules
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 def p_arith_plus(p):
     'arith_expr : arith_expr PLUS term'
     p[0] = Node("+", [p[1], p[3]])
@@ -124,7 +115,6 @@ def p_arith_minus(p):
 def p_arith_term(p):
     'arith_expr : term'
     p[0] = p[1]
-
 
 
 def p_expression_compare(p):
@@ -139,20 +129,8 @@ def p_expression_compare(p):
 def p_expression_arith(p):
     'expression : arith_expr'
     p[0] = p[1]
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-
-"""
-def p_expression_invalid_chain_long(p):
-    'expression : expression ID'
-    print("Invalid identifier chain")
-    raise SyntaxError
-"""
-
-
-#------------------------------------------------------
-#:p:- term rules
 def p_term_mult(p):
     'term : term MULT factor'
     p[0] = Node("*", [p[1], p[3]])
@@ -164,9 +142,8 @@ def p_term_div(p):
 def p_term_factor(p):
     'term : factor'
     p[0] = p[1]
-#--------------------------------------------------------
-#:p:-   factor rules
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
 def p_factor_number(p):
     'factor : NUMBER'
     p[0] = Node("num", value=p[1])
@@ -174,8 +151,6 @@ def p_factor_number(p):
 def p_factor_id(p):
     'factor : ID'
     p[0] = Node("id", value=p[1])
-
-
 
 def p_factor_power(p):
     'factor : factor POWER term'
@@ -185,6 +160,7 @@ def p_factor_group(p):
     'factor : LPAREN expression RPAREN'
     p[0] = p[2]
 
+
 def p_statement_show(p):
     'statement : SHOW LPAREN expression RPAREN'
     p[0] = Node("show", [p[3]])
@@ -192,6 +168,7 @@ def p_statement_show(p):
 def p_statement_take(p):
     'statement : TAKE LPAREN ID RPAREN'
     p[0] = Node("take", [Node("id", value=p[3])])
+
 
 def p_statement_decl_int(p):
     'statement : INT ID EQUALS expression'
@@ -205,18 +182,12 @@ def p_statement_decl_string(p):
     'statement : STRING_TYPE ID EQUALS expression'
     p[0] = Node("decl", [Node("id", value=p[2]), p[4]], value="string")
 
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#-------------------------------------------
-#:p:- BLOCK RULE
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 def p_block(p):
     'block : LBRACE opt_newlines stmt_list opt_newlines RBRACE'
     p[0] = Node("block", p[3])
 
 
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#---------------------------------------------
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 def p_statement_while(p):
     'statement : WHILE LPAREN expression RPAREN opt_newlines block'
     p[0] = Node("while", [p[3], p[6]])
@@ -230,118 +201,127 @@ def p_statement_for(p):
         p[14]
     ])
 
-
 def p_statement_if(p):
     'statement : IF LPAREN expression RPAREN opt_newlines block'
     p[0] = Node("if", [p[3], p[6]])
 
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# -------- ERROR HANDLING --------
+
+def p_statement_while_error(p):
+    'statement : WHILE LPAREN error RPAREN opt_newlines block'
+    global SyntaxCount
+    pretty_error("Invalid while loop skipped", p.lineno(1), "Check the condition inside while")
+    p[0] = Node("error")
+    SyntaxCount += 1
+
+def p_statement_for_error(p):
+    'statement : FOR LPAREN error RPAREN opt_newlines block'
+    global SyntaxCount
+    pretty_error("Invalid for loop skipped", p.lineno(1), "Check the condition inside while")
+    p[0] = Node("error")
+    SyntaxCount += 1
+
+def p_statement_while_error_incomplete(p):
+    'statement : WHILE LPAREN error block'
+    global SyntaxCount
+    pretty_error("Invalid while loop skipped", p.lineno(1), "You are missing ')' ")
+    p[0] = Node("error")
+    SyntaxCount += 1
+
+def p_statement_for_error_loose(p):
+    'statement : FOR LPAREN error block'
+    global SyntaxCount
+    pretty_error("Invalid for loop skipped", p.lineno(1), "You are missing ')' ")
+    p[0] = Node("error")
+    SyntaxCount += 1
 
 def p_line_recover(p):
     'line : error NEWLINE'
     global SyntaxCount
-    print("💥 skipping bad line")
+    pretty_error("Bad line ", p.lineno(1), "there is an error in line")
     SyntaxCount += 1
     p[0] = []
 
+
 def p_statement_decl_missing_equals(p):
     'statement : type ID expression'
-    print(f"Missing '=' in declaration near line {p.lineno(2)}")
+    pretty_error("Invalid declaration", p.lineno(2), "Missing '=' in the declaration")
     p[0] = Node("error")
     global SyntaxCount
     SyntaxCount += 1
 
-
-# bad assignment rhs
 def p_statement_assign_error(p):
     'statement : ID EQUALS error'
-    print("Invalid assignment skipped")
+    pretty_error("Invalid declaration", p.lineno(1), "The value you are assigning is invalid")
     p[0] = Node("error")
     global SyntaxCount
     SyntaxCount += 1
 
-
-# bad declaration rhs
 def p_statement_decl_error(p):
     'statement : type ID EQUALS error'
-    print("Invalid declaration skipped")
+    pretty_error("Invalid declaration", p.lineno(1), "The value you are assigning is invalid")
     p[0] = Node("error")
     global SyntaxCount
     SyntaxCount += 1
 
-
-# missing identifier in declaration
 def p_statement_decl_missing_id(p):
     'statement : type EQUALS error'
-    print("Missing identifier in declaration")
+    pretty_error("Invalid declaration", p.lineno(1), "Missing identifier in declairation")
     p[0] = Node("error")
     global SyntaxCount
     SyntaxCount += 1
 
-
-# bad identifier token from lexer
 def p_statement_decl_bad_id(p):
     'statement : type ERROR EQUALS error'
-    print("Invalid identifier in declaration")
+    pretty_error("Invalid declaration", p.lineno(1), "The identifier you are using is wrong ")
     p[0] = Node("error")
     global SyntaxCount
     SyntaxCount += 1
 
-
-# totally broken declaration
 def p_statement_decl_broken(p):
-    'statement : type error'
-    print("Incomplete declaration")
+    'statement : type error NEWLINE'
+    pretty_error("Invalid declaration", p.lineno(1), "Expected variable name or assignment after type ")
     p[0] = Node("error")
     global SyntaxCount
     SyntaxCount += 1
 
 
-#---------------------------------
+def p_factor_error(p):
+    'factor : ERROR'
+    console.print("[bold red]Bad string detected[/bold red]")
+    p[0] = Node("error")
+
 
 def p_full_statement(p):
     'full_statement : statement stmt_sep'
     p[0] = p[1]
 
 
-#----------------------------------
-
 def p_error(p):
     if not p:
-        print("[SYNTAX ERROR] Unexpected EOF")
+        console.print("[bold red][SYNTAX ERROR][/bold red] Unexpected EOF")
         return
 
-    print(f"[SYNTAX ERROR] Line {p.lineno}, Token '{p.value}'")
+    console.print(f"[bold red][SYNTAX ERROR][/bold red] Line {p.lineno}, Token '{p.value}'")
+    global SyntaxCount
+    SyntaxCount += 1
 
-#-----------------------------------
-#:p:- Factor
 
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 def p_factor_string(p):
     'factor : STRING'
     p[0] = Node("str", value=p[1])
 
-def p_factor_error(p):
-    'factor : ERROR'
-    print("Bad string detected")
-    p[0] = Node("error")
-#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-# ------------------------
-# * ERROR HANDLING
-# ---------------------------------------------------------------------
+parser = yacc.yacc(
+    start='program',
+    write_tables=False,
+    debug=False,
+    errorlog=yacc.NullLogger()
+)
 
-# ------------------------
-# BUILD PARSER
-# ------------------------
-parser = yacc.yacc(start='program')
 
-# ------------------------
-# TREE PRINT (DEBUG)
-# ------------------------
 def print_tree(node, level=0):
-    print("  " * level + f"{node.type} ({node.value})")
+    console.print("  " * level + f"{node.type} ({node.value})")
     for child in node.children:
         print_tree(child, level + 1)

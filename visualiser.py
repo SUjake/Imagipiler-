@@ -1,6 +1,9 @@
 from graphviz import Digraph
 from html import escape 
 
+
+#-------------------------------------------------------------------------------
+
 def build_token_table(tokens):
     rows = ""
     for tok in tokens:
@@ -24,6 +27,8 @@ def build_token_table(tokens):
         {rows}
     </TABLE>>'''
 
+#----------------------------------------------------------------------------
+
 def build_ir_table(ir_code):
     rows = ""
     for i, instr in enumerate(ir_code):
@@ -42,6 +47,7 @@ def build_ir_table(ir_code):
         {rows}
     </TABLE>>'''
 
+#----------------------------------------------------------------------------
 
 def visualize_ast(root,tokens,ir_code):
     dot = Digraph()
@@ -84,6 +90,8 @@ def visualize_ast(root,tokens,ir_code):
         return "ellipse"
 
     dot.attr('node', fontname="Arial")
+
+#----------------------------------------------------------
 
     def get_color(node):
         if node.type == "num":
@@ -129,11 +137,13 @@ def visualize_ast(root,tokens,ir_code):
             return "white"
 
         return "white"
+    
+
+#----------------------------------------------------
 
     def add_nodes(node, parent=None):
         if node is None:
             return None
-
         nonlocal counter
         node_id = str(counter)
         counter += 1
@@ -158,7 +168,6 @@ def visualize_ast(root,tokens,ir_code):
             add_nodes(child, node_id)
 
         return node_id   # 🔥 IMPORTANT
-
 
     table_label = build_token_table(tokens)
 
@@ -188,4 +197,5 @@ def visualize_ast(root,tokens,ir_code):
     dot.edge("TOKENS", root_id)
     dot.edge("IR", root_id)
 
-    dot.render("ast_tree", view=True)
+    output_path = dot.render("ast_tree",format="png" ,view=False)
+    return output_path

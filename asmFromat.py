@@ -3,11 +3,10 @@ from rich.console import Console
 from rich import box
 from rich.text import Text
 
-console = Console()
-
 REGISTERS = {"eax", "ebx", "ecx", "edx"}
 JUMPS = {"JMP", "JE", "JNE", "JG", "JL"}
 STACK = {"PUSH","POP"}
+
 
 def style_operand(op):
     if not op:
@@ -16,13 +15,17 @@ def style_operand(op):
     op_clean = op.replace("[", "").replace("]", "")
 
     if op_clean in REGISTERS:
-        return f"[#F3F752]{op}[/#F3F752]" #.... Yellow color registers
+        return f"[#F3F752]{op}[/#F3F752]"
 
     return op
 
 
-def format_assembly(code, data=None):
+def format_assembly(code, data=None, console=None):
+    # 🔥 fallback for CLI usage
+    if console is None:
+        console = Console()
 
+    # ---------------- DATA SECTION ----------------
     if data:
         data_table = Table(
             title="Data Section",
@@ -38,14 +41,14 @@ def format_assembly(code, data=None):
         for addr, typ, var, val in data:
             data_table.add_row(
                 f"[red]{addr}[/red]",
-                f"[#9666DE]{typ}[/#9666DE]", #..... bluish or something bruh
-                f"[#86DE66]{var}[/#86DE66]", #.... Green ( light green)
+                f"[#9666DE]{typ}[/#9666DE]",
+                f"[#86DE66]{var}[/#86DE66]",
                 f"{val}"
             )
 
         console.print(data_table)
 
-
+    # ---------------- CODE SECTION ----------------
     table = Table(
         title="Custom Assembly Output",
         box=box.HEAVY,
@@ -58,7 +61,6 @@ def format_assembly(code, data=None):
     table.add_column("Reg2")
 
     for addr, instr, op1, op2 in code:
-        # Label handling
         if instr.endswith(":"):
             label_text = Text(instr, style="bold white")
             table.add_row(
@@ -72,21 +74,18 @@ def format_assembly(code, data=None):
 
         instr_upper = instr.upper()
 
-# --- SPECIAL PRINT HANDLING ---
+        # --- PRINT styling ---
         if instr_upper == "PRINT" or instr_upper == "; PRINT":
             instr_text = "[underline][#F527F2]PRINT[/#F527F2][/underline]"
             op1 = f"[underline][#F3F752]{op1}[/#F3F752][/underline]" if op1 else f"[#D8D7D9]----[/#D8D7D9]"
-            op2 = f"[underline][#F3F752]{op2}[/underline][/#F3F752]" if op2 else f"[#D8D7D9]----[/#D8D7D9]"
+            op2 = f"[underline][#F3F752]{op2}[/#F3F752][/underline]" if op2 else f"[#D8D7D9]----[/#D8D7D9]"
 
-        # --- Jump styling ---
         elif instr_upper in JUMPS:
             instr_text = f"[#2110B2]{instr_upper}[/#2110B2]"
 
-        # --- Stack styling ---
         elif instr_upper in STACK:
             instr_text = f"[#38FFF5]{instr_upper}[/#38FFF5]"
 
-        # --- Default ---
         else:
             instr_text = instr_upper
 
