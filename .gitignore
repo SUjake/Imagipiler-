@@ -4,3 +4,4 @@ ast_tree.pdf
 parser.out
 parsetab.py
 __pycache__
+.DS_Store
